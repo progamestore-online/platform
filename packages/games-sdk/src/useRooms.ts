@@ -1,13 +1,16 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 
 /**
- * The shape of a server message handled by a game. Games narrow this with
- * their own message types via the generic parameter:
+ * The shape of a message handled by a room. Games narrow this with their
+ * own message types via the generic parameter:
  *
  *   type ChessMsg = { type: 'move'; uci: string } | { type: 'state'; fen: string };
  *   const room = useRooms<ChessMsg>({ ... });
+ *
+ * The only contract is `type: string` — payload fields are entirely up to
+ * the game. Discriminated unions across `type` are the recommended shape.
  */
-export type RoomMessage = { type: string; [k: string]: unknown };
+export type RoomMessage = { type: string };
 
 export type RoomStatus = 'idle' | 'connecting' | 'connected' | 'closed' | 'error';
 
