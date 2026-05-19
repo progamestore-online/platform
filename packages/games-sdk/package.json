@@ -1,6 +1,6 @@
 {
   "name": "@progamestore/games",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "description": "Shared React UI primitives for games on ProGameStore — GameShell, GameTopbar, useRooms, etc. Brand-consistent, scroll-free, multiplayer-ready.",
   "license": "MIT",
   "type": "module",

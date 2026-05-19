@@ -34,3 +34,10 @@ export {
   type LeaderboardEntry,
   useLeaderboard,
 } from './useLeaderboard.js';
+export {
+  type RoomMessage,
+  type RoomStatus,
+  type UseRoomsOptions,
+  type UseRoomsResult,
+  useRooms,
+} from './useRooms.js';
