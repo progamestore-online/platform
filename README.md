@@ -48,6 +48,27 @@ npm version patch
 git push --follow-tags
 ```
 
+### One-time npm setup (still TODO)
+
+The first push tries to publish all three packages, which 404s today
+because the `@progamestore` scope hasn't been created on npm. To unblock:
+
+1. On [npmjs.com](https://www.npmjs.com), create the `@progamestore`
+   organization (or claim the scope on a user account).
+2. For each of the three packages, do a first manual publish:
+   ```bash
+   cd packages/games-sdk && npm publish --access public
+   cd ../compliance     && npm publish --access public
+   cd ../pgs-cli        && npm publish --access public
+   ```
+3. On each package's npm page, **Settings → Trusted Publisher** → add
+   GitHub Actions trusted publisher with:
+   - Organization: `progamestore-online`
+   - Repository: `platform`
+   - Workflow: `publish.yml`
+
+After that the GitHub Actions publish flow takes over.
+
 ## License
 
 MIT
