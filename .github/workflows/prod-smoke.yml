@@ -1,0 +1,41 @@
+name: Prod smoke
+
+# Runs every 30 minutes + on demand. Hits live endpoints to verify
+# core PGS services are up.
+#
+# This workflow is mostly aspirational — at the time the platform repo
+# is created the only live PGS asset is the marketing splash. Steps for
+# services that don't exist yet are left as `continue-on-error` so the
+# scheduled run doesn't fail noisily for unbuilt infra; flip each back
+# to a hard check once that service is live.
+
+on:
+  schedule:
+    - cron: '*/30 * * * *'
+  workflow_dispatch:
+
+permissions: {}
+
+jobs:
+  smoke:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Marketing splash
+        run: |
+          STATUS=$(curl -s -o /dev/null -w '%{http_code}' https://progamestore.online)
+          echo "progamestore.online → $STATUS"
+          [ "$STATUS" = "200" ] || exit 1
+
+      - name: Auth service
+        continue-on-error: true
+        run: |
+          STATUS=$(curl -s -o /dev/null -w '%{http_code}' https://auth.progamestore.online/me)
+          echo "auth.progamestore.online/me → $STATUS (401 expected for unauthenticated)"
+          [ "$STATUS" = "401" ] || [ "$STATUS" = "200" ] || exit 1
+
+      - name: Rooms service
+        continue-on-error: true
+        run: |
+          STATUS=$(curl -s -o /dev/null -w '%{http_code}' https://rooms.progamestore.online/health)
+          echo "rooms.progamestore.online/health → $STATUS"
+          [ "$STATUS" = "200" ] || exit 1

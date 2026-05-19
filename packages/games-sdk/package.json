@@ -1,0 +1,55 @@
+{
+  "name": "@progamestore/games",
+  "version": "0.1.0",
+  "description": "Shared React UI primitives for games on ProGameStore — GameShell, GameTopbar, useRooms, etc. Brand-consistent, scroll-free, multiplayer-ready.",
+  "license": "MIT",
+  "type": "module",
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js"
+    }
+  },
+  "homepage": "https://github.com/progamestore-online/platform#readme",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/progamestore-online/platform.git",
+    "directory": "packages/games-sdk"
+  },
+  "bugs": {
+    "url": "https://github.com/progamestore-online/platform/issues"
+  },
+  "keywords": [
+    "progamestore",
+    "game",
+    "ui",
+    "react",
+    "topbar",
+    "shell",
+    "multiplayer",
+    "websocket",
+    "rooms"
+  ],
+  "files": [
+    "dist",
+    "README.md"
+  ],
+  "engines": {
+    "node": ">=22"
+  },
+  "scripts": {
+    "build": "tsc",
+    "typecheck": "tsc --noEmit"
+  },
+  "peerDependencies": {
+    "react": "^19.0.0"
+  },
+  "devDependencies": {
+    "@types/react": "^19.2.14",
+    "react": "^19.2.5",
+    "typescript": "^5.7.0"
+  },
+  "sideEffects": false
+}
