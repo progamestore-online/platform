@@ -1,6 +1,6 @@
 {
   "name": "@progamestore/cli",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "description": "pgs — CLI for publishing paid multiplayer games to progamestore.online",
   "license": "MIT",
   "type": "module",
