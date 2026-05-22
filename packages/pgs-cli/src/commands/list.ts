@@ -76,7 +76,7 @@ export const listCommand = new Command('list')
       const h = histories[i]!;
       printApp(a, h, opts.verbose ?? false);
     }
-    const gameCount = apps.filter((a) => a.store === 'games').length;
+    const gameCount = apps.filter((a) => a.store === 'games' || a.store === 'games_pro').length;
     const appCount = apps.length - gameCount;
     const summary =
       gameCount === 0

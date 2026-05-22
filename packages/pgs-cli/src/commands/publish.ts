@@ -44,12 +44,12 @@ interface SubmissionInput {
   demo: string | null;
 }
 
-// fgs always targets games. Identity is shared with fas (one ~/.fas/config.json).
-const STORE = 'games' as const;
+// pgs targets games_pro. Identity is shared with fas (one ~/.fas/config.json).
+const STORE = 'games_pro' as const;
 const META = {
   label: 'ProGameStore',
   domain: 'progamestore.online',
-  org: 'freegamestore-online',
+  org: 'progamestore-online',
 } as const;
 
 export const publishCommand = new Command('publish')
