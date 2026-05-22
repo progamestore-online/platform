@@ -6,7 +6,7 @@ interface ListedApp {
   id: string;
   ownerLogin: string;
   createdAt: number;
-  store?: 'apps' | 'games';
+  store?: 'apps' | 'games' | 'apps_pro' | 'games_pro';
   category: string | null;
   type: string | null;
   oneliner: string | null;
