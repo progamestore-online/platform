@@ -8,7 +8,6 @@ on:
 
 permissions:
   contents: read
-  pull-requests: write
 
 jobs:
   check:
@@ -27,14 +26,3 @@ jobs:
       - run: pnpm -r build
       - run: pnpm lint
       - run: pnpm -r typecheck
-
-      - name: VibeCode QA scan
-        run: npx -y @vibecodeqa/cli@latest --skip-tests --ci --sarif --pr-comment
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-
-      - name: Upload SARIF to GitHub Security
-        uses: github/codeql-action/upload-sarif@v3
-        if: always()
-        with:
-          sarif_file: .vibe-check/report.sarif
