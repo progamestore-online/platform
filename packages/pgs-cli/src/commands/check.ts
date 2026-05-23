@@ -1,3 +1,4 @@
+import { execSync } from 'node:child_process';
 import { existsSync } from 'node:fs';
 import { dirname, resolve } from 'node:path';
 import { type CheckResult, runChecks } from '@progamestore/compliance';
@@ -90,11 +91,29 @@ export function renderCheckResults(results: CheckResult[]): CheckSummary {
 }
 
 export const checkCommand = new Command('check')
-  .description('Run FreeAppStore compliance checks against the current directory.')
+  .description('Run compliance checks + VibeCode QA code health scan.')
   .option('--dir <path>', 'Directory to check', process.cwd())
-  .action(async (opts: { dir: string }) => {
+  .option('--skip-vcqa', 'Skip VibeCode QA scan (compliance only).')
+  .action(async (opts: { dir: string; skipVcqa?: boolean }) => {
     const root = findGameRoot(opts.dir);
+
+    // 1. Platform compliance checks
+    process.stdout.write(bold('Platform compliance\n\n'));
     const results = await runChecks(root);
     const { failed } = renderCheckResults(results);
+
+    // 2. VibeCode QA code health scan
+    if (!opts.skipVcqa) {
+      process.stdout.write(`\n${bold('VibeCode QA')}\n\n`);
+      try {
+        execSync('npx -y @vibecodeqa/cli@latest --skip-tests', {
+          cwd: root,
+          stdio: 'inherit',
+        });
+      } catch {
+        process.stdout.write(yellow('  vcqa scan failed or scored below threshold\n'));
+      }
+    }
+
     if (failed > 0) process.exit(1);
   });
