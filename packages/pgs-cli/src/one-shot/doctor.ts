@@ -53,7 +53,7 @@ async function checkBinary(name: string): Promise<CheckResult> {
 }
 
 async function checkConfigFile(): Promise<CheckResult> {
-  const path = join(homedir(), '.fas', 'config.json');
+  const path = join(homedir(), '.pgs', 'config.json');
   try {
     const raw = await readFile(path, 'utf8');
     JSON.parse(raw);
@@ -61,7 +61,7 @@ async function checkConfigFile(): Promise<CheckResult> {
   } catch (err) {
     const code = (err as NodeJS.ErrnoException).code;
     if (code === 'ENOENT') {
-      return { name: 'Config file', status: 'warn', detail: 'No config yet — run `fas login`.' };
+      return { name: 'Config file', status: 'warn', detail: 'No config yet — run `pgs login`.' };
     }
     return {
       name: 'Config file',

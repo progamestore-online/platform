@@ -35,7 +35,7 @@ const TRACKER_PATTERNS = [
 
 export interface LiveAuditInput {
   appId: string;
-  liveUrl: string; // e.g. https://tip.freeappstore.online
+  liveUrl: string; // e.g. https://chess.progamestore.online
 }
 
 export interface LiveAuditReport {

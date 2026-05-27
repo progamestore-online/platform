@@ -1,7 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import {
   buildPromptList,
-  buildSubmissionUrl,
   parseGitHubRepo,
   resolveCategory,
   resolveFromFlags,
@@ -38,66 +37,13 @@ describe('parseGitHubRepo', () => {
   });
 });
 
-describe('buildSubmissionUrl', () => {
-  const baseInput = {
-    name: 'my-app',
-    category: 'Productivity' as const,
-    type: 'Standalone (no backend, localStorage only)' as const,
-    oneliner: 'A quick way to track tasks',
-    description: 'Detailed description here.',
-    repo: null,
-    demo: null,
-  };
-
-  it('builds a github.com submission URL with the right template', () => {
-    const url = new URL(buildSubmissionUrl(baseInput));
-    expect(url.host).toBe('github.com');
-    expect(url.pathname).toBe('/freeappstore-online/submissions/issues/new');
-    expect(url.searchParams.get('template')).toBe('app-submission.yml');
-  });
-
-  it('prefills every required template field', () => {
-    const url = new URL(buildSubmissionUrl(baseInput));
-    expect(url.searchParams.get('name')).toBe('my-app');
-    expect(url.searchParams.get('category')).toBe('Productivity');
-    expect(url.searchParams.get('type')).toBe(baseInput.type);
-    expect(url.searchParams.get('oneliner')).toBe('A quick way to track tasks');
-    expect(url.searchParams.get('description')).toBe('Detailed description here.');
-    expect(url.searchParams.get('title')).toBe('[Submission] my-app');
-  });
-
-  it('includes repo when present, omits when null', () => {
-    const withRepo = new URL(buildSubmissionUrl({ ...baseInput, repo: 'https://github.com/me/x' }));
-    expect(withRepo.searchParams.get('repo')).toBe('https://github.com/me/x');
-    const without = new URL(buildSubmissionUrl(baseInput));
-    expect(without.searchParams.has('repo')).toBe(false);
-  });
-
-  it('includes demo when present, omits when null', () => {
-    const withDemo = new URL(buildSubmissionUrl({ ...baseInput, demo: 'https://demo.example' }));
-    expect(withDemo.searchParams.get('demo')).toBe('https://demo.example');
-    const without = new URL(buildSubmissionUrl(baseInput));
-    expect(without.searchParams.has('demo')).toBe(false);
-  });
-
-  it('properly URL-encodes special characters in description', () => {
-    const url = new URL(
-      buildSubmissionUrl({
-        ...baseInput,
-        description: 'A "quoted" thing & more (with parens)',
-      }),
-    );
-    expect(url.searchParams.get('description')).toBe('A "quoted" thing & more (with parens)');
-  });
-});
-
 describe('resolveCategory', () => {
   it('matches exact label', () => {
-    expect(resolveCategory('Productivity')).toBe('Productivity');
+    expect(resolveCategory('Arcade')).toBe('Arcade');
   });
   it('matches case-insensitive', () => {
-    expect(resolveCategory('utilities')).toBe('Utilities');
-    expect(resolveCategory('UTILITIES')).toBe('Utilities');
+    expect(resolveCategory('strategy')).toBe('Strategy');
+    expect(resolveCategory('STRATEGY')).toBe('Strategy');
     expect(resolveCategory('  Brain Training  ')).toBe('Brain Training');
   });
   it('matches "other" short form', () => {
@@ -132,15 +78,15 @@ describe('resolveFromFlags', () => {
   });
   it('resolves valid combinations', () => {
     const r = resolveFromFlags({
-      name: 'my-app',
-      category: 'utilities',
+      name: 'my-game',
+      category: 'arcade',
       type: 'standalone',
       oneliner: 'Does a thing',
       demo: 'https://demo.example',
     });
     expect(r.errors).toEqual([]);
-    expect(r.values.name).toBe('my-app');
-    expect(r.values.category).toBe('Utilities');
+    expect(r.values.name).toBe('my-game');
+    expect(r.values.category).toBe('Arcade');
     expect(r.values.type).toBe('Standalone (no backend, localStorage only)');
     expect(r.values.oneliner).toBe('Does a thing');
     expect(r.values.demo).toBe('https://demo.example');
@@ -177,7 +123,7 @@ describe('buildPromptList', () => {
   });
   it('skips a prompt when its value is already resolved', () => {
     const list = buildPromptList(
-      { name: 'my-app', category: 'Utilities', type: 'Standalone (no backend, localStorage only)' },
+      { name: 'my-game', category: 'Arcade', type: 'Standalone (no backend, localStorage only)' },
       defaults,
     );
     expect(list.map((p) => p.name)).toEqual(['oneliner', 'demo']);
@@ -187,7 +133,7 @@ describe('buildPromptList', () => {
       buildPromptList(
         {
           name: 'x',
-          category: 'Utilities',
+          category: 'Arcade',
           type: 'Standalone (no backend, localStorage only)',
           oneliner: 'y',
           demo: null,

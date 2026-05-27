@@ -6,18 +6,8 @@ import { Command } from 'commander';
 import prompts from 'prompts';
 import { assertValidAppId } from '../lib/app-id.js';
 import { readConfig } from '../lib/config.js';
-import { openUrl } from '../lib/open.js';
 import { renderCheckResults } from './check.js';
 
-// Games are still routed through the FreeAppStore submissions repo because
-// no `freegamestore-online/submissions` repo exists yet — but the category
-// list is now games-native (matching the storefront filter chips on
-// progamestore.online) so creators can pick the right bucket. The Issue
-// form fallback uses these too; the admin reviewer can map them to the
-// app-side dropdown if the games-submissions repo is still not split out.
-const SUBMISSION_URL = 'https://github.com/freeappstore-online/submissions/issues/new';
-
-// Must match the storefront filter chips on progamestore.online.
 const CATEGORIES = [
   'Brain Training',
   'Arcade',
@@ -39,12 +29,10 @@ interface SubmissionInput {
   category: (typeof CATEGORIES)[number];
   type: (typeof TYPES)[number];
   oneliner: string;
-  description: string;
   repo: string | null;
   demo: string | null;
 }
 
-// pgs targets games_pro. Identity is shared with fas (one ~/.fas/config.json).
 const STORE = 'games_pro' as const;
 const META = {
   label: 'ProGameStore',
@@ -53,11 +41,7 @@ const META = {
 } as const;
 
 export const publishCommand = new Command('publish')
-  .description(
-    'Publish this game to ProGameStore. Provisions repo + hosting + DNS automatically. If auto-provision is unavailable, falls back to opening a prefilled submission Issue for admin review.',
-  )
-  .option('--no-open', 'Print the fallback Issue URL instead of opening a browser.')
-  .option('--issue', 'Skip auto-provision; always open the GitHub Issue form.')
+  .description('Publish this game to ProGameStore. Provisions repo + hosting + DNS automatically.')
   .option(
     '--skip-checks',
     'Skip compliance checks (not recommended — your submission may be rejected).',
@@ -76,8 +60,6 @@ export const publishCommand = new Command('publish')
   )
   .action(
     async (opts: {
-      open: boolean;
-      issue?: boolean;
       skipChecks?: boolean;
       name?: string;
       category?: string;
@@ -86,31 +68,19 @@ export const publishCommand = new Command('publish')
       demo?: string;
       yes?: boolean;
     }) => {
-      // Check auth BEFORE prompting — there's no point asking the user for
-      // 5 fields just to bail at the end with "not signed in". --issue
-      // skips this since the GitHub Issue form path doesn't need a session.
-      if (!opts.issue) {
-        const config = await readConfig();
-        if (!config.session?.token) {
-          process.stdout.write(
-            '\n⚠  Not signed in. Run: fgs login (shared identity with fas).\n' +
-              '   (or run `fgs publish --issue` to submit via the GitHub Issue form instead.)\n',
-          );
-          process.exit(1);
-        }
+      const config = await readConfig();
+      if (!config.session?.token) {
+        process.stdout.write('\nNot signed in. Run: pgs login\n');
+        process.exit(1);
       }
 
-      // Run compliance checks BEFORE prompts so a doomed submission fails
-      // fast. Hard fails block; warnings allow through. Bypass with
-      // --skip-checks if you really need to (admin review will still
-      // catch issues).
       if (!opts.skipChecks) {
         process.stdout.write('Running compliance checks...\n\n');
         const results = await runChecks(process.cwd());
         const { failed } = renderCheckResults(results);
         if (failed > 0) {
           process.stdout.write(
-            '\n⚠  Fix the failures above before publishing, or pass --skip-checks to bypass.\n',
+            '\nFix the failures above before publishing, or pass --skip-checks to bypass.\n',
           );
           process.exit(1);
         }
@@ -121,23 +91,14 @@ export const publishCommand = new Command('publish')
       const appName = await detectAppName();
       const description = await detectDescription();
 
-      process.stdout.write(`\nLet's publish your game to ${META.label}.\n`);
-      if (!repo && opts.issue) {
-        process.stdout.write(
-          '⚠  No GitHub origin detected. Push your repo to GitHub first, then run again.\n',
-        );
-      }
+      process.stdout.write(`\nPublishing to ${META.label}.\n`);
 
-      // Resolve flag values up-front. Whatever's missing falls through to a
-      // prompt — unless --yes is set, in which case missing values abort.
       const resolved = resolveFromFlags(opts);
       if (resolved.errors.length > 0) {
         for (const e of resolved.errors) process.stdout.write(`✗ ${e}\n`);
         process.exit(1);
       }
 
-      // --yes: optional fields default rather than abort. demo is the only
-      // optional field today; new optional fields go here too.
       if (opts.yes && resolved.values.demo === undefined) {
         resolved.values.demo = null;
       }
@@ -165,70 +126,50 @@ export const publishCommand = new Command('publish')
         category: merged.category!,
         type: merged.type!,
         oneliner: merged.oneliner!,
-        // Reuse the oneliner as the body description for the Issue-form
-        // fallback. Auto-provision flow doesn't use it (admin's storefront
-        // uses oneliner directly).
-        description: merged.oneliner!,
         repo: repo ? `https://github.com/${repo}` : null,
         demo: merged.demo?.trim() ? merged.demo : null,
       };
 
-      // Try auto-provision first unless the user explicitly asked for the
-      // Issue-form fallback.
-      if (!opts.issue) {
-        const autoResult = await tryAutoProvision(input);
-        if (autoResult.kind === 'success') {
-          process.stdout.write(`\n✓ Provisioned!\n`);
-          process.stdout.write(`  Live at:  ${autoResult.appUrl}\n`);
-          process.stdout.write(`  Repo:     ${autoResult.repoUrl}\n`);
-          process.stdout.write(`  Listing:  https://progamestore.online/games/${input.name}\n\n`);
-          process.stdout.write(`Push your code so the live URL serves it:\n\n`);
-          process.stdout.write(`  git remote add upstream ${autoResult.repoUrl}.git\n`);
-          process.stdout.write(`  git push upstream main\n\n`);
-          process.stdout.write(`Future commits to main auto-deploy in ~30s.\n`);
-          process.stdout.write(`Run \`fgs list\` any time to see your games.\n`);
-          return;
-        }
-        if (autoResult.kind === 'unauthorized') {
-          process.stdout.write(`\n⚠  Not signed in. Run: fgs login\n`);
-          return;
-        }
-        process.stdout.write(
-          `\n⚠  Auto-provision unavailable (${autoResult.reason}); falling back to Issue form.\n`,
-        );
+      const result = await provision(input, config.session.token, config.apiBase);
+      if (result.kind === 'unauthorized') {
+        process.stdout.write('\nSession expired. Run: pgs login\n');
+        process.exit(1);
+      }
+      if (result.kind !== 'success') {
+        process.stdout.write(`\nProvisioning failed: ${result.reason}\n`);
+        process.exit(1);
       }
 
-      // Fallback: prefilled GitHub Issue form for admin review.
-      const url = buildSubmissionUrl(input);
-      if (opts.open) {
-        process.stdout.write('\nOpening submission form on GitHub...\n');
-        process.stdout.write('Review the prefilled fields and click "Submit new issue".\n');
-        process.stdout.write('A maintainer will provision your app within ~48h.\n');
-        await openUrl(url);
-      } else {
-        process.stdout.write(`\n${url}\n`);
-      }
+      process.stdout.write(`\nProvisioned!\n`);
+      process.stdout.write(`  Live at:  ${result.appUrl}\n`);
+      process.stdout.write(`  Repo:     ${result.repoUrl}\n`);
+      process.stdout.write(`  Listing:  https://${META.domain}/games/${input.name}\n\n`);
+      process.stdout.write(`Push your code:\n\n`);
+      process.stdout.write(`  git remote add upstream ${result.repoUrl}.git\n`);
+      process.stdout.write(`  git push upstream main\n\n`);
+      process.stdout.write(`Future commits to main auto-deploy in ~30s.\n`);
+      process.stdout.write(`Run \`pgs list\` any time to see your games.\n`);
     },
   );
 
-interface AutoProvisionSuccess {
+interface ProvisionSuccess {
   kind: 'success';
   appUrl: string;
   repoUrl: string;
 }
-interface AutoProvisionFailure {
-  kind: 'unconfigured' | 'failed' | 'unauthorized';
+interface ProvisionFailure {
+  kind: 'failed' | 'unauthorized';
   reason: string;
 }
-type AutoProvisionResult = AutoProvisionSuccess | AutoProvisionFailure;
+type ProvisionResult = ProvisionSuccess | ProvisionFailure;
 
-async function tryAutoProvision(input: SubmissionInput): Promise<AutoProvisionResult> {
-  const config = await readConfig();
-  const sessionToken = config.session?.token;
-  if (!sessionToken) return { kind: 'unauthorized', reason: 'no fas session' };
-
+async function provision(
+  input: SubmissionInput,
+  sessionToken: string,
+  apiBase: string,
+): Promise<ProvisionResult> {
   const typeShort = input.type.startsWith('Standalone') ? 'standalone' : 'connected';
-  const res = await fetch(`${config.apiBase}/v1/publish`, {
+  const res = await fetch(`${apiBase}/v1/publish`, {
     method: 'POST',
     headers: {
       Authorization: `Bearer ${sessionToken}`,
@@ -240,16 +181,11 @@ async function tryAutoProvision(input: SubmissionInput): Promise<AutoProvisionRe
       category: input.category,
       type: typeShort,
       oneliner: input.oneliner,
-      description: input.description,
       repo: input.repo,
       demo: input.demo,
     }),
   });
   if (res.status === 401) return { kind: 'unauthorized', reason: 'session expired' };
-  if (res.status === 503) {
-    const body = (await res.json().catch(() => ({}))) as { error?: string };
-    return { kind: 'unconfigured', reason: body.error ?? '503' };
-  }
   if (!res.ok) {
     const body = await res.text();
     return { kind: 'failed', reason: `${res.status}: ${body}` };
@@ -258,22 +194,15 @@ async function tryAutoProvision(input: SubmissionInput): Promise<AutoProvisionRe
   return { kind: 'success', appUrl: result.appUrl, repoUrl: result.repoUrl };
 }
 
-/**
- * Match a user-supplied --category value (case-insensitive, ignores
- * trailing/leading whitespace) against the canonical labels.
- * Returns the canonical form or null if no match.
- */
 export function resolveCategory(value: string): (typeof CATEGORIES)[number] | null {
   const normalized = value.trim().toLowerCase();
   for (const c of CATEGORIES) {
     if (c.toLowerCase() === normalized) return c;
   }
-  // Allow short forms like "other" → "Other (specify in description)".
   if (normalized === 'other') return 'Other (specify in description)';
   return null;
 }
 
-/** Resolve --type short form ("standalone"|"connected") to the full label. */
 export function resolveType(value: string): (typeof TYPES)[number] | null {
   const v = value.trim().toLowerCase();
   if (v === 'standalone' || v === TYPES[0].toLowerCase()) return TYPES[0];
@@ -335,7 +264,7 @@ export function buildPromptList(
     list.push({
       type: 'text',
       name: 'name',
-      message: 'App id (lowercase, used as subdomain)',
+      message: 'Game id (lowercase, used as subdomain)',
       initial: defaults.appName ?? '',
       validate: (value: string) => {
         try {
@@ -351,7 +280,7 @@ export function buildPromptList(
     list.push({
       type: 'select',
       name: 'category',
-      message: "Category (one app per category — check freeappstore.online for what's taken)",
+      message: 'Category',
       choices: CATEGORIES.map((c) => ({ title: c, value: c })),
     });
   }
@@ -359,7 +288,7 @@ export function buildPromptList(
     list.push({
       type: 'select',
       name: 'type',
-      message: 'App type',
+      message: 'Game type',
       choices: TYPES.map((t) => ({ title: t, value: t })),
     });
   }
@@ -380,20 +309,6 @@ export function buildPromptList(
     });
   }
   return list;
-}
-
-export function buildSubmissionUrl(input: SubmissionInput): string {
-  const url = new URL(SUBMISSION_URL);
-  url.searchParams.set('template', 'app-submission.yml');
-  url.searchParams.set('title', `[Submission] ${input.name}`);
-  url.searchParams.set('name', input.name);
-  url.searchParams.set('category', input.category);
-  url.searchParams.set('type', input.type);
-  url.searchParams.set('oneliner', input.oneliner);
-  url.searchParams.set('description', input.description);
-  if (input.repo) url.searchParams.set('repo', input.repo);
-  if (input.demo) url.searchParams.set('demo', input.demo);
-  return url.toString();
 }
 
 async function detectAppName(): Promise<string | null> {

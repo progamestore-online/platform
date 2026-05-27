@@ -1,5 +1,5 @@
 /**
- * @freeappstore/games — shared React UI primitives for ProGameStore games.
+ * @progamestore/games — shared React UI primitives for ProGameStore games.
  *
  * Why this exists:
  * - Games on the platform must be **brand-consistent** (no per-game custom
