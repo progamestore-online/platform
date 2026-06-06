@@ -7,7 +7,7 @@
 ## The rule
 
 > Any game that produces sound from the page **must** respect the platform
-> mute toggle exposed by `@freegamestore/games`.
+> mute toggle exposed by `@progamestore/games`.
 
 In practice, that means a game's source must reference one of:
 
@@ -74,7 +74,7 @@ that produces sound), add a step to that game's
     if grep -rqE "new AudioContext\(|webkitAudioContext|new Audio\(|<audio[ >]|\.loadSound\(" web/src/; then
       if ! grep -rqE "useGameSounds|useSound" web/src/; then
         echo "ERROR: game produces sound but does not respect the platform mute toggle"
-        echo "Fix: import useGameSounds or useSound from @freegamestore/games"
+        echo "Fix: import useGameSounds or useSound from @progamestore/games"
         exit 1
       fi
     fi

@@ -73,7 +73,7 @@ Full rules: <https://progamestore.online/contribute>
 | | fas | gas |
 |---|---|---|
 | Targets | FreeAppStore (`*.freeappstore.online`) | ProGameStore (`*.progamestore.online`) |
-| Org | freeappstore-online | freegamestore-online |
+| Org | freeappstore-online | progamestore-online |
 | Templates | standalone, connected | canvas, grid, 3d |
 | Identity | `~/.fas/config.json` | same file |
 

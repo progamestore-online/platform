@@ -1,9 +1,9 @@
-# @freeappstore/compliance
+# @progamestore/compliance
 
-Compliance checks for apps published on **freeappstore.online**. Same checks the CLI runs locally and the template's CI runs on every push.
+Compliance checks for games published on **progamestore.online**. Same checks the CLI runs locally and the template's CI runs on every push.
 
 ```ts
-import { runChecks } from '@freeappstore/compliance';
+import { runChecks } from '@progamestore/compliance';
 
 const results = await runChecks(process.cwd());
 for (const r of results) {

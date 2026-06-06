@@ -1,8 +1,8 @@
-# @freeappstore/cli
+# @progamestore/cli
 
 ## 0.1.4
 
-- New: `fas check` — runs the 5 [@freeappstore/compliance](https://www.npmjs.com/package/@freeappstore/compliance) checks against the current directory and prints results with actionable suggestions on each fail. Same checks the template's CI runs, so creators get instant local feedback instead of waiting for a push.
+- New: `gas check` — runs the 5 [@progamestore/compliance](https://www.npmjs.com/package/@progamestore/compliance) checks against the current directory and prints results with actionable suggestions on each fail. Same checks the template's CI runs, so creators get instant local feedback instead of waiting for a push.
 
 ## 0.1.3
 
